@@ -32,14 +32,14 @@ private:
         return hash % this->capacity;
     }
 
-    // int hash2(string key) {
-    //     int hash = 0;
-    //
-    //     for (int i = 0; i < key.length(); i++)
-    //         hash += static_cast<int>(key[i]) * (i + 1);
-    //
-    //     return hash;
-    // }
+    int hash2(string key) {
+        int hash = 0;
+
+        for (int i = 0; i < key.length(); i++)
+            hash += static_cast<int>(key[i]) * (i + 1);
+
+        return hash;
+    }
 
     bool is_full() {
         bool flag = true;
@@ -176,76 +176,68 @@ public:
             this->table[0] = nullptr;
     }
 
-    // T* dhget(string key) {
-    //     int index = hash1(key);
-    //     int offset = hash2(key);
-    //
-    //     if (!this->table[index])
-    //         return nullptr;
-    //
-    //     if (this->table[index]->key == key)
-    //         return &this->table[index]->val;
-    //
-    //     while (this->table[index]) {
-    //         offset = hash2(this->table[index]->key);
-    //         if (this->table[index]->key == key)
-    //             break;
-    //
-    //         index = (index + offset) % this->capacity;
-    //     }
-    //
-    //     return &this->table[index]->val;
-    // }
-    //
-    // void dhinsert(string key, T val) {
-    //     int index = hash1(key);
-    //     int offset = hash2(key);
-    //
-    //     HTEntry<T>* entry = new HTEntry<T>(key, val);
-    //
-    //     int i = 0;
-    //     while(this->table[index] && i < this->capacity) {
-    //         offset = hash2(this->table[index]->key);
-    //         index = (index + offset) % this->capacity;
-    //         i++;
-    //     }
-    //
-    //     this->table[index] = entry;
-    // }
-    //
-    // void dhremove(string key) {
-    //     int index = hash1(key);
-    //     int offset = hash2(key);
-    //
-    //     if (this->table[index]->key == key) {
-    //         HTEntry<T>* tmp = this->table[index];
-    //         this->table[index] = nullptr;
-    //         delete tmp;
-    //     } else {
-    //         while (this->table[index]->key != key) {
-    //             offset = hash2(this->table[index]->key);
-    //             index = (index + offset) % this->capacity;
-    //         }
-    //
-    //         HTEntry<T>* tmp = this->table[index];
-    //         this->table[index] = nullptr;
-    //         delete tmp;
-    //     }
-    //
-    //     index = (index + offset) % this->capacity;
-    //     while (this->table[index]) {
-    //         offset = hash2(this->table[index]->key);
-    //         pair<string, T> tmp = {this->table[index]->key, this->table[index]->val};
-    //
-    //         HTEntry<T>* tmp_entry = this->table[index];
-    //         this->table[index] = nullptr;
-    //         delete tmp_entry;
-    //
-    //         this->dhinsert(tmp.first, tmp.second);
-    //
-    //         index = (index + offset) % this->capacity;
-    //     }
-    // }
+    T* dhget(string key) {
+        int index = hash1(key);
+        int offset;
+
+        if (!this->table[index])
+            return nullptr;
+
+        while (this->table[index]) {
+            if (this->table[index]->key == key)
+                break;
+            offset = hash2(this->table[index]->key);
+            index = (index + offset) % this->capacity;
+        }
+
+        return &this->table[index]->val;
+    }
+
+    void dhinsert(string key, T val) {
+        int index = hash1(key);
+        int offset;
+
+        HTEntry<T>* entry = new HTEntry<T>(key, val);
+
+        int i = 0;
+        while(this->table[index] && i < this->capacity) {
+            offset = hash2(this->table[index]->key);
+            index = (index + offset) % this->capacity;
+            i++;
+        }
+
+        this->table[index] = entry;
+    }
+
+    void dhremove(string key) {
+        int index = hash1(key);
+        int offset;
+
+        while (this->table[index]->key != key) {
+            int offset = hash2(this->table[index]->key);
+            index = (index + offset) % this->capacity;
+        }
+
+        HTEntry<T>* tmp = this->table[index];
+        this->table[index] = nullptr;
+        delete tmp;
+
+        index = hash1(key);
+        while (true) {
+            if (!this->table[index] || hash1(this->table[index]->key) != hash1(key))
+                break;
+
+            pair<string, T> tmp_data = {this->table[index]->key, this->table[index]->val};
+            HTEntry<T>* tmp_entry = this->table[index];
+            this->table[index] = nullptr;
+            delete tmp_entry;
+
+            this->dhinsert(tmp_data.first, tmp_data.second);
+
+            offset = hash2(this->table[index]->key);
+            index = (index + offset) % this->capacity;
+        }
+    }
 
     void display() {
         cout << "[";
@@ -267,7 +259,7 @@ public:
 int main() {
     HashTable<int>* hashtable = new HashTable<int>(5);
 
-    // cout << "-----------Linear Probing-----------" << endl;
+    cout << "-----------Linear Probing-----------" << endl;
 
     hashtable->lpinsert("one", 1);
     hashtable->lpinsert("neo", 2);
@@ -290,26 +282,26 @@ int main() {
     hashtable->lpremove("neo");
     hashtable->display();
 
-    // cout << endl << "-----------Double Hashing-----------" << endl;
-    //
-    // hashtable->dhinsert("one", 1);
-    // hashtable->dhinsert("neo", 2);
-    // hashtable->dhinsert("eno", 3);
-    // hashtable->dhinsert("eon", 4);
-    //
-    // cout << *hashtable->dhget("one") << endl;
-    // cout << *hashtable->dhget("neo") << endl;
-    // cout << *hashtable->dhget("eno") << endl;
-    // cout << *hashtable->dhget("eon") << endl;
-    //
-    // hashtable->display();
-    //
-    // hashtable->dhremove("one");
-    // hashtable->display();
-    // hashtable->dhremove("eno");
-    // hashtable->display();
-    // hashtable->dhremove("eon");
-    // hashtable->display();
-    // hashtable->dhremove("neo");
-    // hashtable->display();
+    cout << endl << "-----------Double Hashing-----------" << endl;
+
+    hashtable->dhinsert("one", 1);
+    hashtable->dhinsert("neo", 2);
+    hashtable->dhinsert("eno", 3);
+    hashtable->dhinsert("eon", 4);
+
+    cout << *hashtable->dhget("one") << endl;
+    cout << *hashtable->dhget("neo") << endl;
+    cout << *hashtable->dhget("eno") << endl;
+    cout << *hashtable->dhget("eon") << endl;
+
+    hashtable->display();
+
+    hashtable->dhremove("one");
+    hashtable->display();
+    hashtable->dhremove("eno");
+    hashtable->display();
+    hashtable->dhremove("eon");
+    hashtable->display();
+    hashtable->dhremove("neo");
+    hashtable->display();
 }
