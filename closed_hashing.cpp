@@ -66,41 +66,6 @@ public:
         delete[] this->table;
     }
 
-    T* lpget(string key) {
-        bool flag = false;
-        int index = hash1(key);
-
-        if (!this->table[index])
-            return nullptr;
-
-        if (this->table[index]->key == key)
-            return &this->table[index]->val;
-
-        int tmp = index;
-        index++;
-        while (true) {
-            if (this->table[index]) {
-                if (this->table[index]->key == key)
-                    break;
-
-                if (tmp == index && flag == true) {
-                    return nullptr;
-                }
-
-                if (index >= this->capacity - 1) {
-                    flag = true;
-                    index = 0;
-
-                    continue;
-                }
-            }
-
-            index++;
-        }
-
-        return &this->table[index]->val;
-    }
-
     void lpinsert(string key, T val) {
         int index = hash1(key);
 
@@ -110,7 +75,6 @@ public:
             while(this->table[index]) {
                 if (index >= this->capacity - 1) {
                     index = 0;
-
                     continue;
                 }
 
@@ -121,48 +85,67 @@ public:
         this->table[index] = entry;
     }
 
+    T* lpget(string key) {
+        int index = hash1(key);
+
+        if (!this->table[index])
+            return nullptr;
+
+        if (this->table[index]->key == key)
+            return &this->table[index]->val;
+
+        int tmp = index;
+        index++;
+        bool flag = false;
+        while (true) {
+            if (this->table[index]) {
+                if (this->table[index]->key == key)
+                    break;
+
+                if (tmp == index && flag == true)
+                    return nullptr;
+
+                if (index >= this->capacity - 1) {
+                    flag = true;
+                    index = 0;
+                    continue;
+                }
+            }
+
+            index++;
+        }
+
+        return &this->table[index]->val;
+    }
+
     void lpremove(string key) {
         int index = hash1(key);
 
-        if (!this->table[index]) {
-            cout << "There is no element by " << key << endl;
-
-            return;
-        }
-
-        if (this->table[index]->key == key) {
-            HTEntry<T>* tmp = this->table[index];
-            this->table[index] = nullptr;
-            delete tmp;
-        } else {
-            while (this->table[index]->key != key) {
-                if (index + 1 >= this->capacity) {
-                    index = 0;
-
-                    continue;
-                }
-
-                index++;
+        while (this->table[index]->key != key) {
+            if (index + 1 >= this->capacity) {
+                index = 0;
+                continue;
             }
 
-            HTEntry<T>* tmp = this->table[index];
-            this->table[index] = nullptr;
-            delete tmp;
+            index++;
         }
+
+        HTEntry<T>* tmp = this->table[index];
+        this->table[index] = nullptr;
+        delete tmp;
 
         while (true) {
-            if (
-                (index + 1 < this->capacity && (!this->table[index + 1] || hash1(this->table[index + 1]->key) != hash1(key)))
-                ||
-                (index + 1 >= this->capacity && (!this->table[0] || hash1(this->table[0]->key) != hash1(key)))
-            ) {
-                break;
-            }
+            if (index + 1 < this->capacity) {
+                if (!this->table[index + 1]
+                        || hash1(this->table[index + 1]->key) != hash1(key))
+                    break;
+            } else {
+                if (!this->table[0]
+                        || hash1(this->table[0]->key) != hash1(key))
+                    break;
 
-            if (index + 1 >= this->capacity) {
                 this->table[index] = this->table[0];
                 index = 0;
-
                 continue;
             }
 
@@ -176,16 +159,35 @@ public:
             this->table[0] = nullptr;
     }
 
+    void dhinsert(string key, T val) {
+        int index = hash1(key);
+
+        HTEntry<T>* entry = new HTEntry<T>(key, val);
+
+        int offset;
+        int i = 0;
+        while(this->table[index] && i < 1000) {
+            offset = hash2(this->table[index]->key);
+            index = (index + offset) % this->capacity;
+            i++;
+        }
+
+        if (i >= 1000) {
+            cout << "We could not insert element!" << endl;
+            return;
+        }
+
+        this->table[index] = entry;
+    }
+
     T* dhget(string key) {
         int index = hash1(key);
-        int offset;
 
         if (!this->table[index])
             return nullptr;
 
-        while (this->table[index]) {
-            if (this->table[index]->key == key)
-                break;
+        int offset;
+        while (this->table[index] && this->table[index]->key != key) {
             offset = hash2(this->table[index]->key);
             index = (index + offset) % this->capacity;
         }
@@ -193,28 +195,12 @@ public:
         return &this->table[index]->val;
     }
 
-    void dhinsert(string key, T val) {
-        int index = hash1(key);
-        int offset;
-
-        HTEntry<T>* entry = new HTEntry<T>(key, val);
-
-        int i = 0;
-        while(this->table[index] && i < this->capacity) {
-            offset = hash2(this->table[index]->key);
-            index = (index + offset) % this->capacity;
-            i++;
-        }
-
-        this->table[index] = entry;
-    }
-
     void dhremove(string key) {
         int index = hash1(key);
-        int offset;
 
+        int offset;
         while (this->table[index]->key != key) {
-            int offset = hash2(this->table[index]->key);
+            offset = hash2(this->table[index]->key);
             index = (index + offset) % this->capacity;
         }
 
@@ -222,20 +208,23 @@ public:
         this->table[index] = nullptr;
         delete tmp;
 
-        index = hash1(key);
         while (true) {
-            if (!this->table[index] || hash1(this->table[index]->key) != hash1(key))
+            int next_index = (index + offset) % this->capacity;
+
+            if (!this->table[next_index]) {
                 break;
+            } else if (hash1(this->table[next_index]->key) != hash1(key)) {
+                break;
+            }
 
-            pair<string, T> tmp_data = {this->table[index]->key, this->table[index]->val};
-            HTEntry<T>* tmp_entry = this->table[index];
-            this->table[index] = nullptr;
-            delete tmp_entry;
+            HTEntry<T>* tmp = this->table[next_index];
+            pair<string, T> copy = {tmp->key, tmp->val};
+            this->table[next_index] = nullptr;
+            this->dhinsert(copy.first, copy.second);
+            delete tmp;
 
-            this->dhinsert(tmp_data.first, tmp_data.second);
-
-            offset = hash2(this->table[index]->key);
-            index = (index + offset) % this->capacity;
+            offset = hash2(copy.first);
+            index = next_index;
         }
     }
 
@@ -257,7 +246,7 @@ public:
 
 
 int main() {
-    HashTable<int>* hashtable = new HashTable<int>(5);
+    HashTable<int>* hashtable = new HashTable<int>(10);
 
     cout << "-----------Linear Probing-----------" << endl;
 
