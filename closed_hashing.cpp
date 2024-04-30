@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace std;
@@ -40,19 +41,6 @@ private:
 
         return hash;
     }
-
-    bool is_full() {
-        bool flag = true;
-
-        for (auto hte : this->table) {
-            if (!hte) {
-                flag = false;
-                break;
-            }
-        }
-
-        return flag;
-    }
 public:
     HashTable(int capacity) {
         this->capacity = capacity;
@@ -62,13 +50,10 @@ public:
     ~HashTable() {
         for (auto hte : this->table)
             delete hte;
-
-        delete[] this->table;
     }
 
     void lpinsert(string key, T val) {
         int index = hash1(key);
-
         HTEntry<T>* entry = new HTEntry<T>(key, val);
 
         if (this->table[index] && this->table[index]->key != key) {
@@ -77,7 +62,6 @@ public:
                     index = 0;
                     continue;
                 }
-
                 index++;
             }
         }
@@ -90,7 +74,6 @@ public:
 
         if (!this->table[index])
             return nullptr;
-
         if (this->table[index]->key == key)
             return &this->table[index]->val;
 
@@ -101,7 +84,6 @@ public:
             if (this->table[index]) {
                 if (this->table[index]->key == key)
                     break;
-
                 if (tmp == index && flag == true)
                     return nullptr;
 
@@ -136,14 +118,12 @@ public:
 
         while (true) {
             if (index + 1 < this->capacity) {
-                if (!this->table[index + 1]
-                        || hash1(this->table[index + 1]->key) != hash1(key))
+                if (!this->table[index + 1] || hash1(this->table[index + 1]->key) != hash1(key))
                     break;
             } else {
-                if (!this->table[0]
-                        || hash1(this->table[0]->key) != hash1(key))
+                if (!this->table[0] || hash1(this->table[0]->key) != hash1(key)) {
                     break;
-
+                }
                 this->table[index] = this->table[0];
                 index = 0;
                 continue;
@@ -161,7 +141,6 @@ public:
 
     void dhinsert(string key, T val) {
         int index = hash1(key);
-
         HTEntry<T>* entry = new HTEntry<T>(key, val);
 
         int offset;
@@ -208,24 +187,27 @@ public:
         this->table[index] = nullptr;
         delete tmp;
 
+        vector<pair<string, T>> copied_pairs;
+
         while (true) {
             int next_index = (index + offset) % this->capacity;
 
-            if (!this->table[next_index]) {
+            if (!this->table[next_index])
                 break;
-            } else if (hash1(this->table[next_index]->key) != hash1(key)) {
+            else if (hash1(this->table[next_index]->key) != hash1(key))
                 break;
-            }
 
             HTEntry<T>* tmp = this->table[next_index];
-            pair<string, T> copy = {tmp->key, tmp->val};
+            copied_pairs.push_back(make_pair(tmp->key, tmp->val));
+            offset = hash2(tmp->key);
             this->table[next_index] = nullptr;
-            this->dhinsert(copy.first, copy.second);
             delete tmp;
 
-            offset = hash2(copy.first);
             index = next_index;
         }
+
+        for (auto hte : copied_pairs)
+            this->dhinsert(hte.first, hte.second);
     }
 
     void display() {
@@ -237,7 +219,7 @@ public:
                 cout << "nullptr, ";
         }
         if (this->table[this->capacity - 1])
-            cout << "(" << this->table[this->capacity - 1]->key << " ," << table[this->capacity - 1]->val << ")";
+            cout << "(" << this->table[this->capacity - 1]->key << " ," << this->table[this->capacity - 1]->val << ")";
         else
             cout << "nullptr";
         cout << "]" << endl;
@@ -293,4 +275,6 @@ int main() {
     hashtable->display();
     hashtable->dhremove("neo");
     hashtable->display();
+
+    delete hashtable;
 }
